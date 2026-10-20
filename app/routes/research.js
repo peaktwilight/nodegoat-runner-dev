@@ -4,6 +4,15 @@ const {
     environmentalScripts
 } = require("../../config/config");
 
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 function ResearchHandler(db) {
     "use strict";
 
@@ -16,13 +25,12 @@ function ResearchHandler(db) {
             return needle.get(url, (error, newResponse, body) => {
                 if (!error && newResponse.statusCode === 200) {
                     res.writeHead(200, {
-                        "Content-Type": "text/html"
+                        "Content-Type": "text/html; charset=utf-8"
                     });
                 }
                 res.write("<h1>The following is the stock information you requested.</h1>\n\n");
-                res.write("\n\n");
                 if (body) {
-                    res.write(body);
+                    res.write("<pre>" + escapeHtml(body) + "</pre>");
                 }
                 return res.end();
             });
