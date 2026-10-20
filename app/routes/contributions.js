@@ -27,11 +27,17 @@ function ContributionsHandler(db) {
 
     this.handleContributionsUpdate = (req, res, next) => {
 
-        /*jslint evil: true */
-        // Insecure use of eval() to parse inputs
-        const preTax = eval(req.body.preTax);
-        const afterTax = eval(req.body.afterTax);
-        const roth = eval(req.body.roth);
+        // Parse contribution form values as numbers without evaluating JavaScript.
+        const parsePercentage = value => {
+            if ((typeof value !== "string" && typeof value !== "number") ||
+                (typeof value === "string" && value.trim() === "")) {
+                return NaN;
+            }
+            return Number(value);
+        };
+        const preTax = parsePercentage(req.body.preTax);
+        const afterTax = parsePercentage(req.body.afterTax);
+        const roth = parsePercentage(req.body.roth);
 
         /*
         //Fix for A1 -1 SSJS Injection attacks - uses alternate method to eval
@@ -44,7 +50,9 @@ function ContributionsHandler(db) {
         } = req.session;
 
         //validate contributions
-        const validations = [isNaN(preTax), isNaN(afterTax), isNaN(roth), preTax < 0, afterTax < 0, roth < 0];
+        const validations = [isNaN(preTax), isNaN(afterTax), isNaN(roth),
+            !isFinite(preTax), !isFinite(afterTax), !isFinite(roth),
+            preTax < 0, afterTax < 0, roth < 0];
         const isInvalid = validations.some(validation => validation);
         if (isInvalid) {
             return res.render("contributions", {
