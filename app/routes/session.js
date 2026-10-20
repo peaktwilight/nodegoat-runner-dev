@@ -61,7 +61,12 @@ function SessionHandler(db) {
             const invalidPasswordErrorMessage = "Invalid password";
             if (err) {
                 if (err.noSuchUser) {
-                    console.log("Error: attempt to login with invalid user: ", userName);
+                    // Escape control characters before writing attacker-controlled input
+                    // to the log, preventing forged log entries and terminal controls.
+                    const safeUserName = String(userName).replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, (character) => {
+                        return "\\u" + ("0000" + character.charCodeAt(0).toString(16)).slice(-4);
+                    });
+                    console.log("Error: attempt to login with invalid user: ", safeUserName);
 
                     // Fix for A1 - 3 Log Injection - encode/sanitize input for CRLF Injection
                     // that could result in log forging:
