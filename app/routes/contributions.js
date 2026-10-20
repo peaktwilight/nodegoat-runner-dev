@@ -1,4 +1,5 @@
 const ContributionsDAO = require("../data/contributions-dao").ContributionsDAO;
+const url = require("url");
 const {
     environmentalScripts
 } = require("../../config/config");
@@ -26,6 +27,21 @@ function ContributionsHandler(db) {
     };
 
     this.handleContributionsUpdate = (req, res, next) => {
+
+        // Reject form submissions initiated by another origin. Browsers send an
+        // Origin header for cross-origin POST requests; older clients may use
+        // Referer instead. Leave requests without either header compatible with
+        // existing non-browser clients.
+        const requestOrigin = req.get("origin") || req.get("referer");
+        if (requestOrigin) {
+            const parsedOrigin = url.parse(requestOrigin);
+            const requestHost = req.get("host");
+            if (!parsedOrigin.host || !requestHost ||
+                parsedOrigin.host.toLowerCase() !== requestHost.toLowerCase() ||
+                parsedOrigin.protocol !== `${req.protocol}:`) {
+                return res.status(403).send("Cross-origin contribution update rejected");
+            }
+        }
 
         /*jslint evil: true */
         // Insecure use of eval() to parse inputs
