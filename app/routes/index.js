@@ -1,3 +1,4 @@
+const csrf = require("csurf");
 const SessionHandler = require("./session");
 const ProfileHandler = require("./profile");
 const BenefitsHandler = require("./benefits");
@@ -20,6 +21,20 @@ const index = (app, db) => {
     const memosHandler = new MemosHandler(db);
     const researchHandler = new ResearchHandler(db);
 
+    // Protect the signup and profile forms against cross-site request forgery.
+    // Keep protection scoped to these forms so unrelated forms retain their
+    // existing behavior until they also provide CSRF tokens.
+    const csrfProtection = csrf();
+    const exposeCsrfToken = (req, res, next) => {
+        res.locals.csrftoken = req.csrfToken();
+        next();
+    };
+    const rotateCsrfToken = (req, res, next) => {
+        delete req.session.csrfSecret;
+        res.locals.csrftoken = req.csrfToken();
+        next();
+    };
+
     // Middleware to check if a user is logged in
     const isLoggedIn = sessionHandler.isLoggedInMiddleware;
 
@@ -34,8 +49,8 @@ const index = (app, db) => {
     app.post("/login", sessionHandler.handleLoginRequest);
 
     // Signup form
-    app.get("/signup", sessionHandler.displaySignupPage);
-    app.post("/signup", sessionHandler.handleSignup);
+    app.get("/signup", csrfProtection, exposeCsrfToken, sessionHandler.displaySignupPage);
+    app.post("/signup", csrfProtection, sessionHandler.handleSignup);
 
     // Logout page
     app.get("/logout", sessionHandler.displayLogoutPage);
@@ -44,8 +59,8 @@ const index = (app, db) => {
     app.get("/dashboard", isLoggedIn, sessionHandler.displayWelcomePage);
 
     // Profile page
-    app.get("/profile", isLoggedIn, profileHandler.displayProfile);
-    app.post("/profile", isLoggedIn, profileHandler.handleProfileUpdate);
+    app.get("/profile", isLoggedIn, csrfProtection, exposeCsrfToken, profileHandler.displayProfile);
+    app.post("/profile", isLoggedIn, csrfProtection, rotateCsrfToken, profileHandler.handleProfileUpdate);
 
     // Contributions Page
     app.get("/contributions", isLoggedIn, contributionsHandler.displayContributions);
