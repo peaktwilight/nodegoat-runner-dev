@@ -9,13 +9,22 @@
 const { MongoClient } = require("mongodb");
 const { db } = require("../config/config");
 
+const isProduction = process.env.NODE_ENV === "production";
+const seedPassword = (environmentVariable, nonProductionDefault) => {
+    const configuredPassword = process.env[environmentVariable];
+    if (isProduction && !configuredPassword) {
+        throw new Error(`${environmentVariable} must be set when seeding a production database`);
+    }
+    return configuredPassword || nonProductionDefault;
+};
+
 const USERS_TO_INSERT = [
     {
         "_id": 1,
         "userName": "admin",
         "firstName": "Node Goat",
         "lastName": "Admin",
-        "password": "Admin_123",
+        "password": seedPassword("ADMIN_PASSWORD", "Admin_123"),
         //"password" : "$2a$10$8Zo/1e8KM8QzqOKqbDlYlONBOzukWXrM.IiyzqHRYDXqwB3gzDsba", // Admin_123
         "isAdmin": true
     }, {
@@ -24,7 +33,7 @@ const USERS_TO_INSERT = [
         "firstName": "John",
         "lastName": "Doe",
         "benefitStartDate": "2030-01-10",
-        "password": "User1_123"
+        "password": seedPassword("USER1_PASSWORD", "User1_123")
         // "password" : "$2a$10$RNFhiNmt2TTpVO9cqZElb.LQM9e1mzDoggEHufLjAnAKImc6FNE86",// User1_123
     }, {
         "_id": 3,
@@ -32,7 +41,7 @@ const USERS_TO_INSERT = [
         "firstName": "Will",
         "lastName": "Smith",
         "benefitStartDate": "2025-11-30",
-        "password": "User2_123"
+        "password": seedPassword("USER2_PASSWORD", "User2_123")
         //"password" : "$2a$10$Tlx2cNv15M0Aia7wyItjsepeA8Y6PyBYaNdQqvpxkIUlcONf1ZHyq", // User2_123
     }];
 
@@ -55,7 +64,10 @@ const parseResponse = (err, res, comm) => {
         process.exit(1);
     }
     console.log(comm);
-    console.log(JSON.stringify(res));
+    // User insert results contain the seeded passwords; never include them in logs.
+    if (comm !== "users.insertMany") {
+        console.log(JSON.stringify(res));
+    }
 };
 
 
@@ -95,8 +107,7 @@ MongoClient.connect(db, (err, db) =>  {
         });
 
         // insert admin and test users
-        console.log("Users to insert:");
-        USERS_TO_INSERT.forEach((user) => console.log(JSON.stringify(user)));
+        console.log("Users to insert:", USERS_TO_INSERT.map(user => user.userName).join(", "));
 
         usersCol.insertMany(USERS_TO_INSERT, (err, data) => {
             const finalAllocations = [];
