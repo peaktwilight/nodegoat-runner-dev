@@ -1,4 +1,19 @@
 const MemosDAO = require("../data/memos-dao").MemosDAO;
+const marked = require("marked");
+const renderer = new marked.Renderer();
+const originalLink = renderer.link;
+renderer.link = function (href, title, text) {
+    let normalizedHref;
+    try {
+        normalizedHref = decodeURIComponent(href).replace(/[\u0000-\u0020\u007f]/g, "").toLowerCase();
+    } catch (err) {
+        return text;
+    }
+    const scheme = normalizedHref.match(/^([a-z][a-z0-9+.-]*):/);
+    if ((scheme && !/^(https?|mailto)$/.test(scheme[1])) || /^[^/?#]*&/.test(normalizedHref)) return text;
+    return originalLink.call(this, href, title, text);
+};
+marked.setOptions({ renderer: renderer });
 const {
     environmentalScripts
 } = require("../../config/config");
