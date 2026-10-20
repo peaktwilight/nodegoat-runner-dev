@@ -75,6 +75,24 @@ MongoClient.connect(db, (err, db) => {
     }));
 
     // Enable session management using express middleware
+    // Add the Secure attribute to session cookies, including requests handled
+    // by deployments where TLS is terminated before Express.
+    app.use((req, res, next) => {
+        const setHeader = res.setHeader;
+        res.setHeader = function (name, value) {
+            if (name.toLowerCase() === "set-cookie") {
+                const cookies = Array.isArray(value) ? value : [value];
+                value = cookies.map(cookie => {
+                    if (cookie.indexOf("connect.sid=") === 0 && cookie.indexOf("; Secure") === -1) {
+                        return cookie + "; Secure";
+                    }
+                    return cookie;
+                });
+            }
+            return setHeader.call(this, name, value);
+        };
+        next();
+    });
     app.use(session({
         // genid: (req) => {
         //    return genuuid() // use UUIDs for session IDs
