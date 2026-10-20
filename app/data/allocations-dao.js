@@ -57,9 +57,16 @@ const AllocationsDAO = function(db){
     this.getByUserIdAndThreshold = (userId, threshold, callback) => {
         const parsedUserId = parseInt(userId);
 
+        const hasThreshold = threshold !== undefined && threshold !== null && threshold !== "";
+        const parsedThreshold = Number(threshold);
+        if (hasThreshold && ((typeof threshold !== "string" && typeof threshold !== "number") ||
+            !isFinite(parsedThreshold) || parsedThreshold < 0 || parsedThreshold > 99)) {
+            return callback("The supplied threshold is not valid", null);
+        }
+
         const searchCriteria = () => {
 
-            if (threshold) {
+            if (hasThreshold) {
                 /*
                 // Fix for A1 - 2 NoSQL Injection - escape the threshold parameter properly
                 // Fix this NoSQL Injection which doesn't sanitze the input parameter 'threshold' and allows attackers
@@ -75,7 +82,8 @@ const AllocationsDAO = function(db){
                 throw `The user supplied threshold: ${parsedThreshold} was not valid.`;
                 */
                 return {
-                    $where: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`
+                    userId: parsedUserId,
+                    stocks: { $gt: parsedThreshold }
                 };
             }
             return {
