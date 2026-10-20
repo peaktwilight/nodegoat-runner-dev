@@ -14,11 +14,10 @@ function ResearchHandler(db) {
         if (req.query.symbol) {
             const url = req.query.url + req.query.symbol;
             return needle.get(url, (error, newResponse, body) => {
-                if (!error && newResponse.statusCode === 200) {
-                    res.writeHead(200, {
-                        "Content-Type": "text/html"
-                    });
-                }
+                // The upstream response is untrusted. Serve it as plain text so
+                // remote HTML cannot execute in the application's origin.
+                res.setHeader("Content-Type", "text/plain; charset=utf-8");
+                res.setHeader("X-Content-Type-Options", "nosniff");
                 res.write("<h1>The following is the stock information you requested.</h1>\n\n");
                 res.write("\n\n");
                 if (body) {
