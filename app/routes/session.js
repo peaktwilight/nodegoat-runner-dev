@@ -8,6 +8,9 @@ const {
 function SessionHandler(db) {
     "use strict";
 
+    const MAX_LOGIN_ATTEMPTS = 5;
+    const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+    const loginAttempts = new Map();
     const userDAO = new UserDAO(db);
     const allocationsDAO = new AllocationsDAO(db);
 
@@ -55,6 +58,37 @@ function SessionHandler(db) {
             userName,
             password
         } = req.body;
+        // Use the request's network address rather than the submitted username so
+        // a client cannot lock another user's account by repeatedly guessing it.
+        const address = req.ip || (req.connection && req.connection.remoteAddress) ||
+            (req.socket && req.socket.remoteAddress) || "unknown";
+        const now = Date.now();
+
+        // Expire old entries and keep the in-memory limiter bounded.
+        for (const [key, attempt] of loginAttempts) {
+            if (now - attempt.startedAt >= LOGIN_ATTEMPT_WINDOW_MS) {
+                loginAttempts.delete(key);
+            }
+        }
+        if (!loginAttempts.has(address) && loginAttempts.size >= 10000) {
+            loginAttempts.delete(loginAttempts.keys().next().value);
+        }
+
+        let attempt = loginAttempts.get(address);
+        if (!attempt || now - attempt.startedAt >= LOGIN_ATTEMPT_WINDOW_MS) {
+            attempt = { startedAt: now, count: 0 };
+            loginAttempts.set(address, attempt);
+        }
+        if (attempt.count >= MAX_LOGIN_ATTEMPTS) {
+            return res.status(429).render("login", {
+                userName,
+                password: "",
+                loginError: "Too many login attempts. Please try again later.",
+                environmentalScripts
+            });
+        }
+        attempt.count++;
+
         userDAO.validateLogin(userName, password, (err, user) => {
             const errorMessage = "Invalid username and/or password";
             const invalidUserNameErrorMessage = "Invalid username";
@@ -114,6 +148,7 @@ function SessionHandler(db) {
             // i.e:
             // `req.session.regenerate(() => {})`
             req.session.userId = user._id;
+            loginAttempts.delete(address);
             return res.redirect(user.isAdmin ? "/benefits" : "/dashboard");
         });
     };
