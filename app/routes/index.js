@@ -1,3 +1,4 @@
+const csrf = require("csurf");
 const SessionHandler = require("./session");
 const ProfileHandler = require("./profile");
 const BenefitsHandler = require("./benefits");
@@ -11,6 +12,12 @@ const ErrorHandler = require("./error").errorHandler;
 const index = (app, db) => {
 
     "use strict";
+
+    const memoCsrfProtection = csrf();
+    const exposeMemoCsrfToken = (req, res, next) => {
+        res.locals.csrftoken = req.csrfToken();
+        next();
+    };
 
     const sessionHandler = new SessionHandler(db);
     const profileHandler = new ProfileHandler(db);
@@ -63,8 +70,8 @@ const index = (app, db) => {
     app.get("/allocations/:userId", isLoggedIn, allocationsHandler.displayAllocations);
 
     // Memos Page
-    app.get("/memos", isLoggedIn, memosHandler.displayMemos);
-    app.post("/memos", isLoggedIn, memosHandler.addMemos);
+    app.get("/memos", isLoggedIn, memoCsrfProtection, exposeMemoCsrfToken, memosHandler.displayMemos);
+    app.post("/memos", isLoggedIn, memoCsrfProtection, memosHandler.addMemos);
 
     // Handle redirect for learning resources link
     app.get("/learn", isLoggedIn, (req, res) => {
