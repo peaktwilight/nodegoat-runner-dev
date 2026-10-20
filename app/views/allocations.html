@@ -32,7 +32,7 @@
         {% for allocation in allocations %}
         <div class="panel panel-info">
             <div class="panel-heading">
-                <strong>Asset Allocations for {{allocation.firstName}} {{allocation.lastName}}</strong>
+                <strong>Asset Allocations for {{allocation.firstName | escape}} {{allocation.lastName | escape}}</strong>
             </div>
             <div class="panel-body">
                 <p>Domestic Stocks :
