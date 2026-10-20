@@ -9,14 +9,18 @@
 const { MongoClient } = require("mongodb");
 const { db } = require("../config/config");
 
+const adminPassword = process.env.ADMIN_PASSWORD;
+if (!adminPassword || !adminPassword.trim()) {
+    throw new Error("ADMIN_PASSWORD must be set to a non-empty administrator password before seeding the database");
+}
+
 const USERS_TO_INSERT = [
     {
         "_id": 1,
         "userName": "admin",
         "firstName": "Node Goat",
         "lastName": "Admin",
-        "password": "Admin_123",
-        //"password" : "$2a$10$8Zo/1e8KM8QzqOKqbDlYlONBOzukWXrM.IiyzqHRYDXqwB3gzDsba", // Admin_123
+        "password": adminPassword,
         "isAdmin": true
     }, {
         "_id": 2,
@@ -96,7 +100,10 @@ MongoClient.connect(db, (err, db) =>  {
 
         // insert admin and test users
         console.log("Users to insert:");
-        USERS_TO_INSERT.forEach((user) => console.log(JSON.stringify(user)));
+        USERS_TO_INSERT.forEach((user) => {
+            const { password, ...safeUser } = user;
+            console.log(JSON.stringify(safeUser));
+        });
 
         usersCol.insertMany(USERS_TO_INSERT, (err, data) => {
             const finalAllocations = [];
