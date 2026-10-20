@@ -10,6 +10,7 @@ const envConf = require(path.resolve(__dirname + "/../config/env/" + finalEnv.to
 const config = { ...allConf, ...envConf };
 
 console.log(`Current Config:`);
-console.log(util.inspect(config, false, null));
+// Configuration is logged for debugging, but signing secrets must never be logged.
+console.log(util.inspect({ ...config, cookieSecret: "[REDACTED]" }, false, null));
 
 module.exports = config;
