@@ -7,6 +7,7 @@ const MemosHandler = require("./memos");
 const ResearchHandler = require("./research");
 const tutorialRouter = require("./tutorial");
 const ErrorHandler = require("./error").errorHandler;
+const csrf = require("csurf");
 
 const index = (app, db) => {
 
@@ -25,6 +26,20 @@ const index = (app, db) => {
 
     //Middleware to check if user has admin rights
     const isAdmin = sessionHandler.isAdminUserMiddleware;
+
+    // Validate a session-bound token on every state-changing request and
+    // make a token available to forms rendered by the application.
+    const csrfProtection = csrf();
+    app.use((req, res, next) => csrfProtection(req, res, (err) => {
+        if (err && err.code === "EBADCSRFTOKEN") {
+            return res.status(403).send("Invalid CSRF token");
+        }
+        return next(err);
+    }));
+    app.use((req, res, next) => {
+        res.locals.csrftoken = req.csrfToken();
+        next();
+    });
 
     // The main page of the app
     app.get("/", sessionHandler.displayWelcomePage);

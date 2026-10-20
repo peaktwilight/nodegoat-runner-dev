@@ -32,6 +32,7 @@ function ProfileHandler(db) {
 
             return res.render("profile", {
                 ...doc,
+                csrftoken: req.csrfToken(),
                 environmentalScripts
             });
         });
