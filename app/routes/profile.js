@@ -32,6 +32,7 @@ function ProfileHandler(db) {
 
             return res.render("profile", {
                 ...doc,
+                firstNameSearchQuery: encodeURIComponent(doc.firstName || ""),
                 environmentalScripts
             });
         });
@@ -61,10 +62,10 @@ function ProfileHandler(db) {
         const testComplyWithRequirements = regexPattern.test(bankRouting);
         // if the regex test fails we do not allow saving
         if (testComplyWithRequirements !== true) {
-            const firstNameSafeString = firstName;
             return res.render("profile", {
                 updateError: "Bank Routing number does not comply with requirements for format specified",
-                firstNameSafeString,
+                firstNameSearchQuery: encodeURIComponent(firstName || ""),
+                firstName,
                 lastName,
                 ssn,
                 dob,
@@ -98,6 +99,7 @@ function ProfileHandler(db) {
                 user.userId = userId;
 
                 return res.render("profile", {
+                    firstNameSearchQuery: encodeURIComponent(user.firstName || ""),
                     ...user,
                     environmentalScripts
                 });
