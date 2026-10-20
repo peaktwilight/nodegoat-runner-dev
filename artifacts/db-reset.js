@@ -59,6 +59,11 @@ const parseResponse = (err, res, comm) => {
 };
 
 
+if ((process.env.NODE_ENV || "development").toLowerCase() === "production") {
+    console.error("Database reset is disabled in production.");
+    process.exit(1);
+} else {
+
 // Starting here
 MongoClient.connect(db, (err, db) =>  {
     if (err) {
@@ -133,3 +138,4 @@ MongoClient.connect(db, (err, db) =>  {
         });
     });
 });
+}
