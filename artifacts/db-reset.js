@@ -7,7 +7,12 @@
 // NODE_ENV=production node artifacts/db-reset.js
 
 const { MongoClient } = require("mongodb");
+const crypto = require("crypto");
 const { db } = require("../config/config");
+
+// Never seed a deployable database with a publicly known administrator password.
+// Set ADMIN_PASSWORD before resetting if an operator needs a known initial password.
+const adminPassword = process.env.ADMIN_PASSWORD || crypto.randomBytes(32).toString("hex");
 
 const USERS_TO_INSERT = [
     {
@@ -15,8 +20,7 @@ const USERS_TO_INSERT = [
         "userName": "admin",
         "firstName": "Node Goat",
         "lastName": "Admin",
-        "password": "Admin_123",
-        //"password" : "$2a$10$8Zo/1e8KM8QzqOKqbDlYlONBOzukWXrM.IiyzqHRYDXqwB3gzDsba", // Admin_123
+        "password": adminPassword,
         "isAdmin": true
     }, {
         "_id": 2,
@@ -94,10 +98,7 @@ MongoClient.connect(db, (err, db) =>  {
             parseResponse(err, data, "countersCol.insert");
         });
 
-        // insert admin and test users
-        console.log("Users to insert:");
-        USERS_TO_INSERT.forEach((user) => console.log(JSON.stringify(user)));
-
+        // Insert the administrator and test users without logging their credentials.
         usersCol.insertMany(USERS_TO_INSERT, (err, data) => {
             const finalAllocations = [];
 
