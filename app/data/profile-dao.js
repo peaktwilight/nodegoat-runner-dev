@@ -11,33 +11,43 @@ function ProfileDAO(db) {
     }
 
     const users = db.collection("users");
-
-    /* Fix for A6 - Sensitive Data Exposure
-
-    // Use crypto module to save sensitive data such as ssn, dob in encrypted format
     const crypto = require("crypto");
     const config = require("../../config/config");
+    const sensitiveFields = ["ssn", "dob", "bankAcc", "bankRouting"];
+    const encryptionKey = crypto.createHash("sha256")
+        .update(String(config.cryptoKey), "utf8")
+        .digest();
+    const encryptedPrefix = "enc:v1:";
 
-    /// Helper method create initialization vector
-    // By default the initialization vector is not secure enough, so we create our own
-    const createIV = () => {
-        // create a random salt for the PBKDF2 function - 16 bytes is the minimum length according to NIST
-        const salt = crypto.randomBytes(16);
-        return crypto.pbkdf2Sync(config.cryptoKey, salt, 100000, 512, "sha512");
+    // Use authenticated encryption and a fresh nonce for each stored value.
+    const encrypt = value => {
+        const iv = crypto.randomBytes(12);
+        const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey, iv);
+        const ciphertext = Buffer.concat([
+            cipher.update(JSON.stringify(value), "utf8"),
+            cipher.final()
+        ]);
+        const envelope = Buffer.concat([iv, cipher.getAuthTag(), ciphertext]).toString("base64");
+        return encryptedPrefix + envelope;
     };
 
-    // Helper methods to encryt / decrypt
-    const encrypt = (toEncrypt) => {
-        config.iv = createIV();
-        const cipher = crypto.createCipheriv(config.cryptoAlgo, config.cryptoKey, config.iv);
-        return `${cipher.update(toEncrypt, "utf8", "hex")} ${cipher.final("hex")}`;
+    const decrypt = value => {
+        // Keep existing plaintext records readable while new writes are encrypted.
+        if (typeof value !== "string" || !value.startsWith(encryptedPrefix)) {
+            return value;
+        }
+        const envelope = Buffer.from(value.slice(encryptedPrefix.length), "base64");
+        if (envelope.length < 29) {
+            throw new Error("Invalid encrypted profile value");
+        }
+        const iv = envelope.subarray(0, 12);
+        const authTag = envelope.subarray(12, 28);
+        const ciphertext = envelope.subarray(28);
+        const decipher = crypto.createDecipheriv("aes-256-gcm", encryptionKey, iv);
+        decipher.setAuthTag(authTag);
+        const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+        return JSON.parse(plaintext);
     };
-
-    const decrypt = (toDecrypt) => {
-        const decipher = crypto.createDecipheriv(config.cryptoAlgo, config.cryptoKey, config.iv);
-        return `${decipher.update(toDecrypt, "hex", "utf8")} ${decipher.final("utf8")}`;
-    };
-    */
 
     this.updateUser = (userId, firstName, lastName, ssn, dob, address, bankAcc, bankRouting, callback) => {
 
@@ -64,21 +74,20 @@ function ProfileDAO(db) {
         if (dob) {
             user.dob = dob;
         }
-        /*
-        // Fix for A7 - Sensitive Data Exposure
-        // Store encrypted ssn and DOB
-        if(ssn) {
-            user.ssn = encrypt(ssn);
-        }
-        if(dob) {
-            user.dob = encrypt(dob);
-        }
-        */
+
+        // Return normal profile values to the caller, but persist only encrypted
+        // values for the sensitive fields.
+        const storedUser = { ...user };
+        sensitiveFields.forEach(field => {
+            if (Object.prototype.hasOwnProperty.call(storedUser, field)) {
+                storedUser[field] = encrypt(storedUser[field]);
+            }
+        });
 
         users.update({
                 _id: parseInt(userId)
             }, {
-                $set: user
+                $set: storedUser
             },
             err => {
                 if (!err) {
@@ -97,12 +106,13 @@ function ProfileDAO(db) {
             },
             (err, user) => {
                 if (err) return callback(err, null);
-                /*
-                // Fix for A6 - Sensitive Data Exposure
-                // Decrypt ssn and DOB values to display to user
-                user.ssn = user.ssn ? decrypt(user.ssn) : "";
-                user.dob = user.dob ? decrypt(user.dob) : "";
-                */
+                if (user) {
+                    sensitiveFields.forEach(field => {
+                        if (Object.prototype.hasOwnProperty.call(user, field)) {
+                            user[field] = decrypt(user[field]);
+                        }
+                    });
+                }
 
                 callback(null, user);
             }
