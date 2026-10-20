@@ -12,25 +12,27 @@ function MemosDAO(db) {
 
     const memosCol = db.collection("memos");
 
-    this.insert = (memo, callback) => {
+    this.insert = (memo, userId, callback) => {
 
-        // Create allocations document
+        // Associate each memo with its owner so it can be kept private.
         const memos = {
             memo,
+            userId,
             timestamp: new Date()
         };
 
         memosCol.insert(memos, (err, result) => !err ? callback(null, result) : callback(err, null));
     };
 
-    this.getAllMemos = (callback) => {
+    this.getAllMemos = (userId, callback) => {
 
-        memosCol.find({}).sort({
+        memosCol.find({ userId }).sort({
             timestamp: -1
         }).toArray((err, memos) => {
             if (err) return callback(err, null);
             if (!memos) return callback("ERROR: No memos found", null);
-            callback(null, memos);
+            // Enforce ownership even if a database adapter ignores the query.
+            callback(null, memos.filter(memo => memo.userId === userId));
         });
     };
 
