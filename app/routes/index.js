@@ -1,3 +1,4 @@
+const { URL } = require("url");
 const SessionHandler = require("./session");
 const ProfileHandler = require("./profile");
 const BenefitsHandler = require("./benefits");
@@ -68,8 +69,32 @@ const index = (app, db) => {
 
     // Handle redirect for learning resources link
     app.get("/learn", isLoggedIn, (req, res) => {
-        // Insecure way to handle redirects by taking redirect url from query string
-        return res.redirect(req.query.url);
+        const destination = req.query.url;
+        if(typeof destination !== "string") {
+            return res.redirect("/tutorial/a1");
+        }
+
+        let parsedDestination;
+        try {
+            // Permit root-relative in-app links, but not protocol-relative URLs.
+            if(destination.startsWith("/") && !destination.startsWith("//") && !destination.includes("\\")) {
+                parsedDestination = new URL(destination, "http://localhost");
+                if(parsedDestination.origin === "http://localhost") {
+                    return res.redirect(`${parsedDestination.pathname}${parsedDestination.search}${parsedDestination.hash}`);
+                }
+            }
+
+            // The Learning Resources menu uses this external destination.
+            parsedDestination = new URL(destination);
+            if(parsedDestination.origin === "https://www.khanacademy.org" &&
+                parsedDestination.username === "" && parsedDestination.password === "") {
+                return res.redirect(parsedDestination.href);
+            }
+        } catch(e) {
+            // Invalid URLs are rejected below.
+        }
+
+        return res.redirect("/tutorial/a1");
     });
 
     // Research Page
