@@ -5,7 +5,9 @@
 // This script initializes the database. You can set the environment variable
 // before running it (default: development). ie:
 // NODE_ENV=production node artifacts/db-reset.js
+// Set ADMIN_PASSWORD to provision a known administrator password.
 
+const crypto = require("crypto");
 const { MongoClient } = require("mongodb");
 const { db } = require("../config/config");
 
@@ -15,8 +17,7 @@ const USERS_TO_INSERT = [
         "userName": "admin",
         "firstName": "Node Goat",
         "lastName": "Admin",
-        "password": "Admin_123",
-        //"password" : "$2a$10$8Zo/1e8KM8QzqOKqbDlYlONBOzukWXrM.IiyzqHRYDXqwB3gzDsba", // Admin_123
+        "password": process.env.ADMIN_PASSWORD || crypto.randomBytes(32).toString("hex"),
         "isAdmin": true
     }, {
         "_id": 2,
@@ -96,7 +97,7 @@ MongoClient.connect(db, (err, db) =>  {
 
         // insert admin and test users
         console.log("Users to insert:");
-        USERS_TO_INSERT.forEach((user) => console.log(JSON.stringify(user)));
+        USERS_TO_INSERT.forEach((user) => console.log(JSON.stringify({ userName: user.userName, _id: user._id })));
 
         usersCol.insertMany(USERS_TO_INSERT, (err, data) => {
             const finalAllocations = [];
