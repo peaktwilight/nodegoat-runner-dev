@@ -12,25 +12,30 @@ function MemosDAO(db) {
 
     const memosCol = db.collection("memos");
 
-    this.insert = (memo, callback) => {
+    this.insert = (userId, memo, callback) => {
 
         // Create allocations document
         const memos = {
             memo,
+            userId,
             timestamp: new Date()
         };
 
         memosCol.insert(memos, (err, result) => !err ? callback(null, result) : callback(err, null));
     };
 
-    this.getAllMemos = (callback) => {
+    this.getAllMemos = (userId, callback) => {
 
-        memosCol.find({}).sort({
+        memosCol.find({
+            userId
+        }).sort({
             timestamp: -1
         }).toArray((err, memos) => {
             if (err) return callback(err, null);
             if (!memos) return callback("ERROR: No memos found", null);
-            callback(null, memos);
+            // Keep ownership enforced even when a collection adapter does not
+            // apply the query predicate itself.
+            callback(null, memos.filter(memo => memo.userId === userId));
         });
     };
 
