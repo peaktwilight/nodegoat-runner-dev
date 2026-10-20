@@ -72,7 +72,7 @@
                             <form method="post" role="form" method="post">
                                 <div class="form-group">
                                     <label for="userName">User Name</label>
-                                    <input type="text" class="form-control" id="userName" value="{{userName}}" name="userName" placeholder="Enter user name">
+                                    <input type="text" class="form-control" id="userName" value="{{userName|escape}}" name="userName" placeholder="Enter user name">
                                 </div>
 
                                 <div class="form-group">
@@ -99,7 +99,7 @@
 
                                 <div class="form-group">
                                     <label for="verify">Email (Optional)</label>
-                                    <input type="email" class="form-control" id="email" name="email" value="{{email}}" placeholder="Enter email">
+                                    <input type="email" class="form-control" id="email" name="email" value="{{email|escape}}" placeholder="Enter email">
                                 </div>
                                 <input type="hidden" name="_csrf" value="{{csrftoken}}"></input>
                                 <button type="submit" class="btn btn-primary">Submit</button>
