@@ -57,6 +57,18 @@ const AllocationsDAO = function(db){
     this.getByUserIdAndThreshold = (userId, threshold, callback) => {
         const parsedUserId = parseInt(userId);
 
+        // The threshold is interpolated into a legacy MongoDB $where expression
+        // below, so accept only a plain integer in the supported allocation
+        // range before using it in the expression.
+        let parsedThreshold;
+        if (threshold) {
+            if (!/^\d+$/.test(String(threshold)) || !Number.isSafeInteger(Number(threshold)) ||
+                    Number(threshold) < 0 || Number(threshold) > 99) {
+                return callback("The supplied threshold is not valid.", null);
+            }
+            parsedThreshold = Number(threshold);
+        }
+
         const searchCriteria = () => {
 
             if (threshold) {
@@ -75,7 +87,7 @@ const AllocationsDAO = function(db){
                 throw `The user supplied threshold: ${parsedThreshold} was not valid.`;
                 */
                 return {
-                    $where: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`
+                    $where: `this.userId == ${parsedUserId} && this.stocks > ${parsedThreshold}`
                 };
             }
             return {
