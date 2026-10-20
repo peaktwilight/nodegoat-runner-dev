@@ -10,6 +10,7 @@ const envConf = require(path.resolve(__dirname + "/../config/env/" + finalEnv.to
 const config = { ...allConf, ...envConf };
 
 console.log(`Current Config:`);
-console.log(util.inspect(config, false, null));
+// Do not expose the session signing key in startup logs.
+console.log(util.inspect({ ...config, cookieSecret: "[REDACTED]" }, false, null));
 
 module.exports = config;
