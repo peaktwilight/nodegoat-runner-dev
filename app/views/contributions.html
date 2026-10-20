@@ -44,6 +44,7 @@
 
                 <div class="table-responsive">
                     <form method="POST" action="/contributions">
+                        <input type="hidden" name="_csrf" value="{{csrftoken}}">
                         <table class="table table-bordered table-hover tablesorter">
                             <thead>
                                 <tr>
@@ -86,10 +87,6 @@
                                 </tr>
                             </tbody>
                         </table>
-                        <!-- Fix for A8 - CSRF -->
-                        <!--
-                        <input type="hidden" name="_csrf" value="{{csrftoken}}"></input>
-                        -->
                         <button type="submit" class="btn btn-default">Submit</button>
 
                     </form>
