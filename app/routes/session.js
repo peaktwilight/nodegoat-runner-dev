@@ -57,8 +57,6 @@ function SessionHandler(db) {
         } = req.body;
         userDAO.validateLogin(userName, password, (err, user) => {
             const errorMessage = "Invalid username and/or password";
-            const invalidUserNameErrorMessage = "Invalid username";
-            const invalidPasswordErrorMessage = "Invalid password";
             if (err) {
                 if (err.noSuchUser) {
                     console.log("Error: attempt to login with invalid user: ", userName);
@@ -82,7 +80,7 @@ function SessionHandler(db) {
                     return res.render("login", {
                         userName: userName,
                         password: "",
-                        loginError: invalidUserNameErrorMessage,
+                        loginError: errorMessage,
                         //Fix for A2-2 Broken Auth - Uses identical error for both username, password error
                         // loginError: errorMessage
                         environmentalScripts
@@ -91,7 +89,7 @@ function SessionHandler(db) {
                     return res.render("login", {
                         userName: userName,
                         password: "",
-                        loginError: invalidPasswordErrorMessage,
+                        loginError: errorMessage,
                         //Fix for A2-2 Broken Auth - Uses identical error for both username, password error
                         // loginError: errorMessage
                         environmentalScripts
