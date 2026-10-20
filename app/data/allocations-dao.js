@@ -74,8 +74,15 @@ const AllocationsDAO = function(db){
                 }
                 throw `The user supplied threshold: ${parsedThreshold} was not valid.`;
                 */
+                const parsedThreshold = Number(threshold);
+                const validThreshold = (typeof threshold === "string" || typeof threshold === "number") &&
+                    /^\d+$/.test(String(threshold)) && parsedThreshold <= 99;
+
                 return {
-                    $where: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`
+                    userId: parsedUserId,
+                    stocks: {
+                        $gt: validThreshold ? parsedThreshold : Number.MAX_VALUE
+                    }
                 };
             }
             return {
