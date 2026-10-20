@@ -38,11 +38,11 @@
                 <form role="form" method="post" action="/profile">
                     <div class="form-group">
                         <label for="firstName">First Name</label>
-                        <input type="text" class="form-control" id="firstName" name="firstName" value="{{firstNameSafeString}}" placeholder="Enter first name">
+                        <input type="text" class="form-control" id="firstName" name="firstName" value="{{firstNameSafeString|escape}}" placeholder="Enter first name">
                     </div>
                     <div class="form-group">
                         <label for="lastName">Last Name</label>
-                        <input type="text" class="form-control" id="lastName" name="lastName" value="{{lastName}}" placeholder="Enter last name">
+                        <input type="text" class="form-control" id="lastName" name="lastName" value="{{lastName|escape}}" placeholder="Enter last name">
                     </div>
                     <div class="form-group">
                         <label for="ssn">SSN</label>
