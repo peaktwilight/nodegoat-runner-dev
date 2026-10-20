@@ -1,5 +1,6 @@
 const UserDAO = require("../data/user-dao").UserDAO;
 const AllocationsDAO = require("../data/allocations-dao").AllocationsDAO;
+const csrf = require("csurf");
 const {
     environmentalScripts
 } = require("../../config/config");
@@ -10,6 +11,13 @@ function SessionHandler(db) {
 
     const userDAO = new UserDAO(db);
     const allocationsDAO = new AllocationsDAO(db);
+    const csrfProtection = csrf();
+    const withCsrfProtection = (handler) => (req, res, next) => {
+        csrfProtection(req, res, (err) => {
+            if (err) return next(err);
+            return handler(req, res, next);
+        });
+    };
 
     const prepareUserData = (user, next) => {
         // Generate random allocations
@@ -122,7 +130,7 @@ function SessionHandler(db) {
         req.session.destroy(() => res.redirect("/"));
     };
 
-    this.displaySignupPage = (req, res) => {
+    const displaySignupPage = (req, res) => {
         res.render("signup", {
             userName: "",
             password: "",
@@ -131,6 +139,7 @@ function SessionHandler(db) {
             userNameError: "",
             emailError: "",
             verifyError: "",
+            csrftoken: req.csrfToken(),
             environmentalScripts
         });
     };
@@ -186,7 +195,7 @@ function SessionHandler(db) {
         return true;
     };
 
-    this.handleSignup = (req, res, next) => {
+    const handleSignup = (req, res, next) => {
 
         const {
             email,
@@ -213,6 +222,7 @@ function SessionHandler(db) {
                     errors.userNameError = "User name already in use. Please choose another";
                     return res.render("signup", {
                         ...errors,
+                        csrftoken: req.csrfToken(),
                         environmentalScripts
                     });
                 }
@@ -248,10 +258,14 @@ function SessionHandler(db) {
             console.log("user did not validate");
             return res.render("signup", {
                 ...errors,
+                csrftoken: req.csrfToken(),
                 environmentalScripts
             });
         }
     };
+
+    this.displaySignupPage = withCsrfProtection(displaySignupPage);
+    this.handleSignup = withCsrfProtection(handleSignup);
 
     this.displayWelcomePage = (req, res, next) => {
         let userId;
