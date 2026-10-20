@@ -11,8 +11,15 @@ function ResearchHandler(db) {
 
     this.displayResearch = (req, res) => {
 
-        if (req.query.symbol) {
-            const url = req.query.url + req.query.symbol;
+        if (typeof req.query.symbol === "string" && req.query.symbol) {
+            // Accept ticker symbols only; the destination must not be supplied by
+            // the request. This permits common Yahoo Finance symbols such as
+            // BRK.B, BRK-B, ^GSPC, and EURUSD=X without allowing URL components.
+            if (!/^[A-Za-z0-9.^=-]{1,20}$/.test(req.query.symbol)) {
+                return res.status(400).send("Invalid stock symbol");
+            }
+
+            const url = `https://finance.yahoo.com/quote/${encodeURIComponent(req.query.symbol)}`;
             return needle.get(url, (error, newResponse, body) => {
                 if (!error && newResponse.statusCode === 200) {
                     res.writeHead(200, {
