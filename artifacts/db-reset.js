@@ -4,7 +4,7 @@
 
 // This script initializes the database. You can set the environment variable
 // before running it (default: development). ie:
-// NODE_ENV=production node artifacts/db-reset.js
+// NODE_ENV=development node artifacts/db-reset.js
 
 const { MongoClient } = require("mongodb");
 const { db } = require("../config/config");
@@ -68,6 +68,13 @@ MongoClient.connect(db, (err, db) =>  {
     }
     console.log("Connected to the database");
 
+    // Never reset a production database with the fixed development accounts.
+    // This check must happen before dropping any collections.
+    if (process.env.NODE_ENV === "production") {
+        console.log("Database reset is disabled in production");
+        return process.exit(1);
+    }
+
     const collectionNames = [
         "users",
         "allocations",
@@ -96,7 +103,7 @@ MongoClient.connect(db, (err, db) =>  {
 
         // insert admin and test users
         console.log("Users to insert:");
-        USERS_TO_INSERT.forEach((user) => console.log(JSON.stringify(user)));
+        USERS_TO_INSERT.forEach((user) => console.log(user.userName));
 
         usersCol.insertMany(USERS_TO_INSERT, (err, data) => {
             const finalAllocations = [];
@@ -107,7 +114,7 @@ MongoClient.connect(db, (err, db) =>  {
                 console.log(JSON.stringify(err));
                 process.exit(1);
             }
-            parseResponse(err, data, "users.insertMany");
+            console.log("Inserted users:", data.ops.length);
 
             data.ops.forEach((user) => {
                 const stocks = Math.floor((Math.random() * 40) + 1);
