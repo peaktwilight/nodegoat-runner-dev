@@ -1,4 +1,6 @@
 /* The ProfileDAO must be constructed with a connected database object */
+const crypto = require("crypto");
+
 function ProfileDAO(db) {
 
     "use strict";
@@ -11,33 +13,46 @@ function ProfileDAO(db) {
     }
 
     const users = db.collection("users");
-
-    /* Fix for A6 - Sensitive Data Exposure
-
-    // Use crypto module to save sensitive data such as ssn, dob in encrypted format
-    const crypto = require("crypto");
     const config = require("../../config/config");
+    const sensitiveFields = ["ssn", "dob", "address", "bankAcc", "bankRouting"];
+    const encryptedPrefix = "enc:v1:";
+    if (typeof config.cryptoKey !== "string" || config.cryptoKey.length === 0) {
+        throw new Error("A profile-data encryption key must be configured");
+    }
+    const encryptionKey = crypto.scryptSync(config.cryptoKey, "nodegoat-profile-data-v1", 32);
 
-    /// Helper method create initialization vector
-    // By default the initialization vector is not secure enough, so we create our own
-    const createIV = () => {
-        // create a random salt for the PBKDF2 function - 16 bytes is the minimum length according to NIST
-        const salt = crypto.randomBytes(16);
-        return crypto.pbkdf2Sync(config.cryptoKey, salt, 100000, 512, "sha512");
+    // AES-GCM authenticates each value as well as encrypting it. Keep the IV
+    // alongside each ciphertext; it must be unique for each encryption.
+    const encrypt = value => {
+        const iv = crypto.randomBytes(12);
+        const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey, iv);
+        const ciphertext = Buffer.concat([
+            cipher.update(JSON.stringify(value), "utf8"),
+            cipher.final()
+        ]);
+        const payload = Buffer.concat([iv, cipher.getAuthTag(), ciphertext]);
+        return encryptedPrefix + payload.toString("base64");
     };
 
-    // Helper methods to encryt / decrypt
-    const encrypt = (toEncrypt) => {
-        config.iv = createIV();
-        const cipher = crypto.createCipheriv(config.cryptoAlgo, config.cryptoKey, config.iv);
-        return `${cipher.update(toEncrypt, "utf8", "hex")} ${cipher.final("hex")}`;
+    const decrypt = value => {
+        if (typeof value !== "string" || value.indexOf(encryptedPrefix) !== 0) {
+            throw new Error("Invalid encrypted profile value");
+        }
+        const payload = Buffer.from(value.slice(encryptedPrefix.length), "base64");
+        if (payload.length < 28) {
+            throw new Error("Invalid encrypted profile value");
+        }
+        const iv = payload.slice(0, 12);
+        const authTag = payload.slice(12, 28);
+        const ciphertext = payload.slice(28);
+        const decipher = crypto.createDecipheriv("aes-256-gcm", encryptionKey, iv);
+        decipher.setAuthTag(authTag);
+        const plaintext = Buffer.concat([
+            decipher.update(ciphertext),
+            decipher.final()
+        ]).toString("utf8");
+        return JSON.parse(plaintext);
     };
-
-    const decrypt = (toDecrypt) => {
-        const decipher = crypto.createDecipheriv(config.cryptoAlgo, config.cryptoKey, config.iv);
-        return `${decipher.update(toDecrypt, "hex", "utf8")} ${decipher.final("utf8")}`;
-    };
-    */
 
     this.updateUser = (userId, firstName, lastName, ssn, dob, address, bankAcc, bankRouting, callback) => {
 
@@ -64,21 +79,18 @@ function ProfileDAO(db) {
         if (dob) {
             user.dob = dob;
         }
-        /*
-        // Fix for A7 - Sensitive Data Exposure
-        // Store encrypted ssn and DOB
-        if(ssn) {
-            user.ssn = encrypt(ssn);
-        }
-        if(dob) {
-            user.dob = encrypt(dob);
-        }
-        */
+
+        const storedUser = Object.assign({}, user);
+        sensitiveFields.forEach(field => {
+            if (Object.prototype.hasOwnProperty.call(storedUser, field)) {
+                storedUser[field] = encrypt(storedUser[field]);
+            }
+        });
 
         users.update({
                 _id: parseInt(userId)
             }, {
-                $set: user
+                $set: storedUser
             },
             err => {
                 if (!err) {
@@ -97,14 +109,40 @@ function ProfileDAO(db) {
             },
             (err, user) => {
                 if (err) return callback(err, null);
-                /*
-                // Fix for A6 - Sensitive Data Exposure
-                // Decrypt ssn and DOB values to display to user
-                user.ssn = user.ssn ? decrypt(user.ssn) : "";
-                user.dob = user.dob ? decrypt(user.dob) : "";
-                */
+                if (!user) return callback(null, null);
 
-                callback(null, user);
+                const legacyValues = {};
+                try {
+                    sensitiveFields.forEach(field => {
+                        if (!Object.prototype.hasOwnProperty.call(user, field) || user[field] === null ||
+                            typeof user[field] === "undefined") {
+                            return;
+                        }
+                        if (typeof user[field] === "string" && user[field].indexOf(encryptedPrefix) === 0) {
+                            user[field] = decrypt(user[field]);
+                        } else {
+                            // Migrate records written before encryption was enabled.
+                            legacyValues[field] = encrypt(user[field]);
+                        }
+                    });
+                } catch (decryptError) {
+                    return callback(decryptError, null);
+                }
+
+                if (Object.keys(legacyValues).length === 0) {
+                    return callback(null, user);
+                }
+
+                users.update({
+                        _id: parseInt(userId)
+                    }, {
+                        $set: legacyValues
+                    },
+                    migrationError => {
+                        if (migrationError) return callback(migrationError, null);
+                        callback(null, user);
+                    }
+                );
             }
         );
     };
