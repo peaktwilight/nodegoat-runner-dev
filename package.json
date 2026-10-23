@@ -42,7 +42,7 @@
     "async": "^2.0.0-rc.4",
     "cross-env": "^7.0.2",
     "cypress": "^3.3.1",
-    "grunt": "^1.0.3",
+    "grunt": "^1.5.3",
     "grunt-cli": "^1.2.0",
     "grunt-concurrent": "^2.3.0",
     "grunt-contrib-jshint": "^3.0.0",
@@ -61,5 +61,9 @@
     "zaproxy": "^0.2.0"
   },
   "repository": "https://github.com/OWASP/NodejsGoat",
-  "license": "Apache 2.0"
+  "license": "Apache 2.0",
+  "overrides": {
+    "dot-prop": "4.2.1",
+    "i": "0.3.7"
+  }
 }
