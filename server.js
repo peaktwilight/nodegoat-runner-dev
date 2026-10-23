@@ -1,5 +1,7 @@
 "use strict";
 
+const fs = require("fs");
+const https = require("https");
 const express = require("express");
 const favicon = require("serve-favicon");
 const bodyParser = require("body-parser");
@@ -9,23 +11,20 @@ const consolidate = require("consolidate"); // Templating library adapter for Ex
 const swig = require("swig");
 // const helmet = require("helmet");
 const MongoClient = require("mongodb").MongoClient; // Driver for connecting to MongoDB
-const http = require("http");
 const marked = require("marked");
 //const nosniff = require('dont-sniff-mimetype');
 const app = express(); // Web framework to handle routing requests
 const routes = require("./app/routes");
-const { port, db, cookieSecret } = require("./config/config"); // Application config properties
-/*
-// Fix for A6-Sensitive Data Exposure
-// Load keys for establishing secure HTTPS connection
-const fs = require("fs");
-const https = require("https");
-const path = require("path");
+const { port, db, cookieSecret, tlsKeyPath, tlsCertPath } = require("./config/config"); // Application config properties
+
+if (!tlsKeyPath || !tlsCertPath) {
+    throw new Error("TLS is required: set TLS_KEY_PATH and TLS_CERT_PATH to a private key and certificate");
+}
+
 const httpsOptions = {
-    key: fs.readFileSync(path.resolve(__dirname, "./artifacts/cert/server.key")),
-    cert: fs.readFileSync(path.resolve(__dirname, "./artifacts/cert/server.crt"))
+    key: fs.readFileSync(tlsKeyPath),
+    cert: fs.readFileSync(tlsCertPath)
 };
-*/
 
 MongoClient.connect(db, (err, db) => {
     if (err) {
@@ -82,7 +81,11 @@ MongoClient.connect(db, (err, db) => {
         secret: cookieSecret,
         // Both mandatory in Express v4
         saveUninitialized: true,
-        resave: true
+        resave: true,
+        cookie: {
+            httpOnly: true,
+            secure: true
+        }
         /*
         // Fix for A5 - Security MisConfig
         // Use generic cookie name
@@ -94,8 +97,6 @@ MongoClient.connect(db, (err, db) => {
         // TODO: Add "maxAge"
         cookie: {
             httpOnly: true
-            // Remember to start an HTTPS server to get this working
-            // secure: true
         }
         */
 
@@ -141,17 +142,8 @@ MongoClient.connect(db, (err, db) => {
         */
     });
 
-    // Insecure HTTP connection
-    http.createServer(app).listen(port, () => {
-        console.log(`Express http server listening on port ${port}`);
-    });
-
-    /*
-    // Fix for A6-Sensitive Data Exposure
-    // Use secure HTTPS protocol
     https.createServer(httpsOptions, app).listen(port, () => {
-        console.log(`Express http server listening on port ${port}`);
+        console.log(`Express https server listening on port ${port}`);
     });
-    */
 
 });
