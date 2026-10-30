@@ -61,5 +61,14 @@
     "zaproxy": "^0.2.0"
   },
   "repository": "https://github.com/OWASP/NodejsGoat",
-  "license": "Apache 2.0"
+  "license": "Apache 2.0",
+  "overrides": {
+    "express": {
+      ".": "$express",
+      "send": "0.19.0"
+    },
+    "serve-static@1.13.2": {
+      "send": "0.19.0"
+    }
+  }
 }
