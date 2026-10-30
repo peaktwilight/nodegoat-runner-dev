@@ -61,5 +61,26 @@
     "zaproxy": "^0.2.0"
   },
   "repository": "https://github.com/OWASP/NodejsGoat",
-  "license": "Apache 2.0"
+  "license": "Apache 2.0",
+  "overrides": {
+    "chokidar@2.1.6": {
+      "fsevents": "2.0.0"
+    },
+    "chokidar@2.1.8": {
+      "fsevents": "2.0.0"
+    },
+    "grunt-legacy-util@1.1.1": {
+      "getobject": "1.0.0"
+    },
+    "cache-base@1.0.1": {
+      "set-value": "2.0.1"
+    },
+    "union-value@1.0.0": {
+      "set-value": "2.0.1"
+    },
+    "selenium-webdriver": {
+      ".": "$selenium-webdriver",
+      "adm-zip": "0.6.1"
+    }
+  }
 }
