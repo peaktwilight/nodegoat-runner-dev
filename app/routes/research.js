@@ -12,7 +12,11 @@ function ResearchHandler(db) {
     this.displayResearch = (req, res) => {
 
         if (req.query.symbol) {
-            const url = req.query.url + req.query.symbol;
+            const symbol = String(req.query.symbol);
+            if (!/^[A-Za-z0-9.-]{1,16}$/.test(symbol)) {
+                return res.sendStatus(400);
+            }
+            const url = `https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}`;
             return needle.get(url, (error, newResponse, body) => {
                 if (!error && newResponse.statusCode === 200) {
                     res.writeHead(200, {
