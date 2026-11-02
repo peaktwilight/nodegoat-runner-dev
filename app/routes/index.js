@@ -69,7 +69,15 @@ const index = (app, db) => {
     // Handle redirect for learning resources link
     app.get("/learn", isLoggedIn, (req, res) => {
         // Insecure way to handle redirects by taking redirect url from query string
-        return res.redirect(req.query.url);
+        const redirectUrl = req.query.url;
+        const allowedExternalUrl = "https://www.khanacademy.org/economics-finance-domain/core-finance/investment-vehicles-tutorial/ira-401ks/v/traditional-iras";
+        const isLocalPath = typeof redirectUrl === "string" &&
+            redirectUrl.charAt(0) === "/" &&
+            redirectUrl.charAt(1) !== "/" &&
+            redirectUrl.indexOf(String.fromCharCode(92)) === -1;
+        return res.redirect(isLocalPath || redirectUrl === allowedExternalUrl
+            ? redirectUrl
+            : "/dashboard");
     });
 
     // Research Page
