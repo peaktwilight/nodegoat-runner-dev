@@ -61,5 +61,10 @@
     "zaproxy": "^0.2.0"
   },
   "repository": "https://github.com/OWASP/NodejsGoat",
-  "license": "Apache 2.0"
+  "license": "Apache 2.0",
+  "overrides": {
+    "mime": "1.4.1",
+    "moment": "2.29.4",
+    "path-to-regexp": "0.1.13"
+  }
 }
