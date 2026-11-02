@@ -48,8 +48,8 @@
 
                     <tr>
                         <td>{{user._id.toString()}}</td>
-                        <td>{{user.firstName}}</td>
-                        <td>{{user.lastName}}</td>
+                        <td>{{user.firstName|escape}}</td>
+                        <td>{{user.lastName|escape}}</td>
                         <td>
                             <form method="POST" action="/benefits">
                                 <div class="input-group">
